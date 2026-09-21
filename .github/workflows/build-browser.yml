@@ -1,0 +1,54 @@
+name: Собрать Лосяндекс Браузер
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Скачать исходный код
+        uses: actions/checkout@v4
+
+      - name: Установить .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Опубликовать приложение
+        shell: pwsh
+        run: >-
+          dotnet publish src/LosyandexBrowser/LosyandexBrowser.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          --output publish
+
+      - name: Упаковать готовый EXE в ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path publish/* -DestinationPath dist/LosyandexBrowser-Windows-x64.zip -Force
+
+      - name: Загрузить ZIP как Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LosyandexBrowser-Windows-x64
+          path: dist/LosyandexBrowser-Windows-x64.zip
+          if-no-files-found: error
+
+      - name: Прикрепить ZIP к релизу по тегу
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/LosyandexBrowser-Windows-x64.zip
+          generate_release_notes: true
