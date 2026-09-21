@@ -1,11 +1,12 @@
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace LosyandexBrowser;
 
 internal static class ProtectedData
 {
-    public static byte[] Protect(byte[] userData, byte[]? optionalEntropy, DataProtectionScope scope) => ProtectedDataNative.Protect(userData, optionalEntropy);
-    public static byte[] Unprotect(byte[] encryptedData, byte[]? optionalEntropy, DataProtectionScope scope) => ProtectedDataNative.Unprotect(encryptedData, optionalEntropy);
+    public static byte[] Protect(byte[] userData, byte[]? optionalEntropy, DataProtectionScope scope) => ProtectedDataNative.Protect(userData, optionalEntropy ?? []);
+    public static byte[] Unprotect(byte[] encryptedData, byte[]? optionalEntropy, DataProtectionScope scope) => ProtectedDataNative.Unprotect(encryptedData, optionalEntropy ?? []);
 }
 
 public enum DataProtectionScope { CurrentUser, LocalMachine }
@@ -27,7 +28,7 @@ internal static class ProtectedDataNative
         try
         {
             var ok = protect ? CryptProtectData(ref data, null, ref ent, IntPtr.Zero, IntPtr.Zero, 0, out output) : CryptUnprotectData(ref data, IntPtr.Zero, ref ent, IntPtr.Zero, IntPtr.Zero, 0, out output);
-            if (!ok) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            if (!ok) throw new Win32Exception(Marshal.GetLastWin32Error());
             var result = new byte[output.cbData]; Marshal.Copy(output.pbData, result, 0, output.cbData); LocalFree(output.pbData); return result;
         }
         finally { Marshal.FreeHGlobal(inputPtr); Marshal.FreeHGlobal(entropyPtr); }
